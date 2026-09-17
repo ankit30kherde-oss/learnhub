@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="hero">
+    <div>
+      <span class="badge" style="border-color:var(--teal); color:var(--teal);">PRACTICE-FIRST LEARNING</span>
+      <h1>Learn DevOps by running the actual commands.</h1>
+      <p class="lead">Start with a free Linux preview. Create an account to unlock the full course, then practice each chapter in a disposable Ubuntu terminal.</p>
+      <div class="actions">
+        <a href="{% url 'signup' %}" class="btn btn-primary">Create free account</a>
+        <a href="#skills" class="btn btn-ghost">Browse skills</a>
+      </div>
+    </div>
+    <div class="termcard" aria-hidden="true">
+      <div class="bar"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      <div class="body">
+        <div><span class="prompt">learner@sandbox:~$</span> pwd</div>
+        <div class="out">/root</div>
+        <div><span class="prompt">learner@sandbox:~$</span> ls -la</div>
+        <div class="out">drwx------ 1 root root 4096 /root</div>
+        <div><span class="prompt">learner@sandbox:~$</span> <span class="typeline"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <section id="skills">
+    <h2>Skills</h2>
+    <p class="desc">Pick a track. Each one is a set of courses that build on each other.</p>
+    <div class="grid">
+      {% for skill in skills %}
+        <div class="card">
+          <h3><a href="{{ skill.get_absolute_url }}">{{ skill.name }}</a></h3>
+          <p>{{ skill.description|default:"No description yet." }}</p>
+          <span class="meta">{{ skill.courses.count }} course{{ skill.courses.count|pluralize }}</span>
+        </div>
+      {% empty %}
+        <div class="empty">No skill tracks yet — add one in <a href="/admin/">/admin</a>.</div>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

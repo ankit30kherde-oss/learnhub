@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <section>
+    <h2>{{ skill.name }}</h2>
+    <p class="desc">{{ skill.description }}</p>
+    <div class="grid">
+      {% for course in courses %}
+        <div class="card">
+          <h3><a href="{{ course.get_absolute_url }}">{{ course.title }}</a></h3>
+          <span class="badge level-{{ course.level }}">{{ course.get_level_display }}</span>
+          <p>{{ course.summary }}</p>
+        </div>
+      {% empty %}
+        <div class="empty">No published courses yet in this skill.</div>
+      {% endfor %}
+    </div>
+  </section>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Your courses</h2>
+  <div class="grid">
+    {% for e in enrollments %}
+      <div class="card">
+        <h3><a href="{{ e.course.get_absolute_url }}">{{ e.course.title }}</a></h3>
+        <span class="meta">{{ e.course.skill.name }}</span>
+      </div>
+    {% empty %}
+      <div class="empty">You haven't enrolled in anything yet. <a href="{% url 'home' %}">Browse skills</a>.</div>
+    {% endfor %}
+  </div>
+{% endblock %}

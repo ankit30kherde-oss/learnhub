@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+  <div style="max-width:520px; margin:0 auto;">
+    <div class="auth-card">
+      <h2>Log in to LearnHub</h2>
+      <p class="desc">Log in to continue your Linux chapters and practical terminal sessions.</p>
+      <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit" class="btn btn-primary" style="width:100%;">Log in</button>
+      </form>
+      <p class="meta" style="margin-top:16px;">New here? <a href="{% url 'signup' %}">Create a free account</a></p>
+    </div>
+  </div>
+{% endblock %}

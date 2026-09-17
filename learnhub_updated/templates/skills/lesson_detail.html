@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{% block content %}
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+    <div>
+      <span class="meta">{{ course.title }}</span>
+      <h2 style="margin:2px 0 0;">{{ lesson.title }}</h2>
+    </div>
+    {% if is_preview %}
+      <span class="badge" style="border-color:var(--accent); color:var(--accent);">Free preview</span>
+    {% elif already_completed %}
+      <span class="badge" style="border-color:var(--teal); color:var(--teal);">Completed</span>
+    {% endif %}
+  </div>
+
+  {% if is_preview %}
+    <div class="preview-banner">
+      <strong>This is the public preview chapter.</strong>
+      <span>Sign up + enroll to unlock every remaining Linux chapter and use the live terminal.</span>
+      <a href="{% url 'signup' %}?next={{ request.path }}" class="btn btn-primary">Sign up free</a>
+    </div>
+  {% endif %}
+
+  <div class="split">
+    <div class="pane notes" id="notes-pane">
+      <div class="lesson-heading">Notes</div>
+      {% for block in notes_blocks %}
+        <div class="lesson-block">
+          {% if block.block_type == "text" %}
+            <div class="note-text">{{ block.text_content|linebreaks }}</div>
+          {% elif block.block_type == "video" %}
+            <iframe width="100%" height="360" src="{{ block.video_url }}" frameborder="0" allowfullscreen style="border-radius:4px;"></iframe>
+          {% elif block.block_type == "quiz" %}
+            <p><em>Quiz block — question data: {{ block.data }}</em></p>
+          {% endif %}
+        </div>
+      {% empty %}
+        <p class="meta">No notes for this topic.</p>
+      {% endfor %}
+    </div>
+
+    <div class="pane practice">
+      {% if lab_block %}
+        <div class="practice-toolbar">
+          <div>
+            <strong>Practical Linux lab</strong>
+            <div class="meta">Disposable Ubuntu terminal · your work is not saved after the session</div>
+          </div>
+          <div class="practice-actions">
+            {% if already_completed %}
+              <a href="{{ next_url }}" class="btn btn-ghost">Next chapter</a>
+            {% endif %}
+            {% if can_practice %}
+              <button id="start-btn" class="btn btn-primary" type="button">Start practice</button>
+            {% else %}
+              <a href="{% url 'signup' %}?next={{ request.path }}" class="btn btn-primary">Sign up to practice</a>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if lab_block.data.goal %}
+          <div class="practice-guide">
+            <h3>Practical objective</h3>
+            <p>{{ lab_block.data.goal }}</p>
+            {% if lab_block.data.commands %}
+              <h4>Commands to try</h4>
+              <pre>{% for command in lab_block.data.commands %}{{ command }}
+{% endfor %}</pre>
+            {% endif %}
+            {% if lab_block.data.tasks %}
+              <h4>Tasks</h4>
+              <ol>
+                {% for task in lab_block.data.tasks %}<li>{{ task }}</li>{% endfor %}
+              </ol>
+            {% endif %}
+            {% if lab_block.data.check %}
+              <h4>Verify</h4>
+              <p class="meta">{{ lab_block.data.check }}</p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if can_practice %}
+          <div id="term-placeholder" class="empty" style="margin:12px;">Click <strong>Start practice</strong> to launch the live Linux terminal.</div>
+          <div id="term-error" class="terminal-error" style="display:none; margin:12px;"></div>
+          <div id="term-wrap" style="display:none; flex:1; padding:12px; min-height:280px;">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/css/xterm.min.css">
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/xterm.min.js"></script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/addon-fit/addon-fit.min.js"></script>
+            <div id="term-{{ lab_block.id }}" class="termbox"></div>
+          </div>
+        {% else %}
+          <div class="locked-practice">
+            <strong>Practice is locked until you sign up and enroll.</strong>
+            <span>You'll get a real Ubuntu shell for commands such as <code>pwd</code>, <code>ls</code>, <code>grep</code>, <code>ps</code>, <code>ip</code>, and Bash scripting.</span>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="empty" style="margin:20px;">No practice lab for this topic.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if user.is_authenticated and is_enrolled %}
+    <form method="post" action="{% url 'mark_complete' lesson.id %}" style="margin-top:20px;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">
+        {% if already_completed %}Continue{% else %}Mark as complete &amp; continue{% endif %}
+      </button>
+    </form>
+  {% endif %}
+
+  <script>
+    (function () {
+      const notes = document.getElementById("notes-pane");
+      if (notes) {
+        notes.addEventListener("copy", (e) => e.preventDefault());
+        notes.addEventListener("contextmenu", (e) => e.preventDefault());
+        notes.addEventListener("selectstart", (e) => e.preventDefault());
+      }
+    })();
+
+    {% if lab_block and can_practice %}
+    document.getElementById("start-btn").addEventListener("click", function () {
+      const startBtn = document.getElementById("start-btn");
+      const placeholder = document.getElementById("term-placeholder");
+      const errorBox = document.getElementById("term-error");
+      const wrap = document.getElementById("term-wrap");
+
+      startBtn.disabled = true;
+      startBtn.textContent = "Starting…";
+      errorBox.style.display = "none";
+      placeholder.style.display = "none";
+      wrap.style.display = "flex";
+
+      const term = new Terminal({ cursorBlink: true, theme: { background: "#0c0f13" } });
+      const fitAddon = new FitAddon.FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(document.getElementById("term-{{ lab_block.id }}"));
+      fitAddon.fit();
+
+      const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+      const wsHost = window.location.hostname + ":8765";
+      const ws = new WebSocket(wsProtocol + "://" + wsHost);
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "auth", token: "{{ terminal_token }}" }));
+        startBtn.textContent = "Practice running";
+        term.focus();
+        term.onData((data) => ws.send(data));
+        term.onResize(({ cols, rows }) => ws.send(JSON.stringify({ type: "resize", cols, rows })));
+        window.addEventListener("resize", () => fitAddon.fit());
+      };
+
+      ws.onmessage = (evt) => term.write(new TextDecoder().decode(new Uint8Array(evt.data)));
+
+      ws.onerror = () => {
+        errorBox.innerHTML = "<strong>Could not start the practice terminal.</strong><br>Make sure Docker Desktop is running, the sandbox image was built with <code>docker compose build sandbox</code>, and the terminal service is running with <code>docker compose up --build</code>. Then refresh this page and try again.";
+        errorBox.style.display = "block";
+        wrap.style.display = "none";
+        placeholder.style.display = "flex";
+        startBtn.disabled = false;
+        startBtn.textContent = "Retry practice";
+      };
+
+      ws.onclose = () => {
+        if (startBtn.textContent === "Practice running") {
+          term.write("\r\n\x1b[31m[practice session ended]\x1b[0m\r\n");
+        }
+        startBtn.disabled = false;
+      };
+    }, { once: true });
+    {% endif %}
+  </script>
+{% endblock %}

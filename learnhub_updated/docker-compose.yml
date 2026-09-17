@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: learnhub
+      POSTGRES_PASSWORD: learnhub
+      POSTGRES_DB: learnhub
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+
+  # Build-only: produces the "learnhub-sandbox" image that the terminal
+  # server launches per practice session. Not started by `up` by default —
+  # run `docker compose build sandbox` once (and again after editing it).
+  sandbox:
+    build: ./sandbox
+    image: learnhub-sandbox
+    profiles: ["build-only"]
+
+  # Bridges the browser's terminal to a real ephemeral Linux container.
+  # Mounting the host docker socket is what lets this container launch
+  # *sibling* sandbox containers via the host's Docker daemon.
+  # TESTING ONLY — see README before exposing this beyond your own machine.
+  terminal:
+    build: ./terminal_server
+    ports:
+      - "8765:8765"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    env_file: .env
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
