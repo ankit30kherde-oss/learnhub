@@ -83,9 +83,9 @@
           <div id="term-placeholder" class="empty" style="margin:12px;">Click <strong>Start practice</strong> to launch the live Linux terminal.</div>
           <div id="term-error" class="terminal-error" style="display:none; margin:12px;"></div>
           <div id="term-wrap" style="display:none; flex:1; padding:12px; min-height:280px;">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/css/xterm.min.css">
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/xterm.min.js"></script>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/5.3.0/addon-fit/addon-fit.min.js"></script>
+            {% load static %}<link rel="stylesheet" href="{% static "vendor/xterm/xterm.min.css" %}">
+            <script src="{% static "vendor/xterm/xterm.min.js" %}"></script>
+            <script src="{% static "vendor/xterm/addon-fit/addon-fit.min.js" %}"></script>
             <div id="term-{{ lab_block.id }}" class="termbox"></div>
           </div>
         {% else %}
@@ -139,8 +139,24 @@
       fitAddon.fit();
 
       const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-      const wsHost = window.location.hostname + ":8765";
-      const ws = new WebSocket(wsProtocol + "://" + wsHost);
+      let wsHost;
+
+      // GitHub Codespaces exposes forwarded ports using separate hostnames:
+      // <codespace>-8000.app.github.dev -> <codespace>-8765.app.github.dev
+      if (window.location.hostname.endsWith(".app.github.dev")) {
+        wsHost = window.location.hostname.replace(
+          /-8000\.app\.github\.dev$/,
+          "-8765.app.github.dev"
+        );
+      } else {
+        // Local Docker development
+        wsHost = window.location.hostname + ":8765";
+      }
+
+      const wsUrl = wsProtocol + "://" + wsHost;
+console.log("[LAB] Page host:", window.location.host);
+console.log("[LAB] WebSocket URL:", wsUrl);
+const ws = new WebSocket(wsUrl);
       ws.binaryType = "arraybuffer";
 
       ws.onopen = () => {

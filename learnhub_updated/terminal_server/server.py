@@ -54,6 +54,7 @@ def valid_token(token):
 
 
 async def handler(websocket):
+    print(f"[WS] connection received from {websocket.remote_address}", flush=True)
     # Authentication happens before a Docker container is created. The web
     # application only renders a short-lived token to enrolled learners.
     try:
@@ -154,7 +155,7 @@ async def handler(websocket):
 
 
 async def main():
-    print("Terminal server listening on ws://0.0.0.0:8765")
+    print("Terminal server listening on ws://0.0.0.0:8765", flush=True)
     async with websockets.serve(handler, "0.0.0.0", 8765, max_size=None):
         await asyncio.Future()
 
